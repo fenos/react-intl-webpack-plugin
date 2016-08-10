@@ -54,13 +54,13 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
         var currentLangFile = require(langObj.file);
         var langName = langObj.lang;
 
-        var messagesIntoLang = jsonMessages.reduce(function (obj, message) {
+        var messagesIntoLang = jsonMessages.reduce(function (array, message) {
           var transDone = _.find(currentLangFile, { id: message.id });
 
           if (transDone) {
-            return transDone;
+            return array.concat([transDone]);
           } else {
-            return { id: message.id, defaultMessage: '' };
+            return array.concat([{ id: message.id, defaultMessage: '[TODO: ' + message.defaultMessage + ']'}]);
           }
         }, []);
 
