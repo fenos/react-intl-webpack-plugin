@@ -1,4 +1,6 @@
 var _ = require('lodash');
+var async = require('async');
+var fs = require('fs');
 
 /**
  * Created by ogi on 27.05.16.
@@ -44,12 +46,11 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
 
     var jsonString = JSON.stringify(jsonMessages, undefined, 2);
     // console.log("jsonString:",jsonString);
-
-    var fileName = __this.options.defaultLang + '.json' || 'en.json';
+    var fileName = 'translations/' + __this.options.defaultLang + '.json' || 'en.json';
     var supportedLangs = __this.options.supportedLangs;
 
     if (Array.isArray(supportedLangs)) {
-      supportedLangs.forEach(function (langObj) {
+      async.each(supportedLangs, function (langObj, callbackEach) {
         var currentLangFile = require(langObj.file);
         var langName = langObj.lang;
 
@@ -65,7 +66,7 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
 
         var messagesLangJson = JSON.stringify(messagesIntoLang, undefined, 2);
 
-        compilation.assets[langName + '.json'] = {
+        compilation.assets['translations/' + langName + '.json'] = {
           source: function () {
             return messagesLangJson;
           },
@@ -73,20 +74,24 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
             return messagesLangJson.length;
           }
         };
+
+        fs.writeFile(langObj.file,messagesLangJson, function() {
+          callbackEach();
+        });
+      }, function finished() {
+        // Insert this list into the Webpack build as a new file asset:
+        compilation.assets[fileName] = {
+          source: function () {
+            return jsonString;
+          },
+          size: function () {
+            return jsonString.length;
+          }
+        };
+
+        callback();
       });
     }
-
-    // Insert this list into the Webpack build as a new file asset:
-    compilation.assets[fileName] = {
-      source: function () {
-        return jsonString;
-      },
-      size: function () {
-        return jsonString.length;
-      }
-    };
-
-    callback();
   });
 };
 
