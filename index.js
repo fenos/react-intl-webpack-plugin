@@ -51,6 +51,7 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
 
     if (Array.isArray(supportedLangs)) {
       async.each(supportedLangs, function (langObj, callbackEach) {
+        delete require.cache[require.resolve(langObj.file)]
         var currentLangFile = require(langObj.file);
         var langName = langObj.lang;
 
@@ -75,9 +76,13 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
           }
         };
 
-        fs.writeFile(langObj.file,messagesLangJson, function() {
+        if (JSON.stringify(currentLangFile, undefined, 2) != messagesLangJson) {
+          fs.writeFile(langObj.file,messagesLangJson, function() {
+            callbackEach();
+          });
+        } else {
           callbackEach();
-        });
+        }
       }, function finished() {
         // Insert this list into the Webpack build as a new file asset:
         compilation.assets[fileName] = {
@@ -89,7 +94,16 @@ ReactIntlPlugin.prototype.apply = function (compiler) {
           }
         };
 
-        callback();
+        var pathDef = __this.options.root + '/' + fileName;
+        delete require.cache[require.resolve(pathDef)]
+        var dTrans = require(pathDef);
+        if (JSON.stringify(dTrans, undefined, 2) != jsonString) {
+          fs.writeFile(pathDef,jsonString, function() {
+            callback();
+          });
+        } else {
+          callback();
+        }
       });
     }
   });
